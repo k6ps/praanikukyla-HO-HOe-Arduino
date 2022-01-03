@@ -1,10 +1,13 @@
 #include <SoftwareSerial.h>
 #include <Servo.h>
 
+# Bluetooth module baud rate. My module is BC-06, and it uses 9600.
 #define BLUETOOTH_MODULE_BAUD_RATE 9600
 
 // Pins for controlling two trains (actually just sets of blocks of railroad)
 // independently of each other using a L298 DC motor controller.
+// THe _ENA pins for controlling motor speeds via pulse width modulation (PWM)
+// have to be pins where higher than default PWM frequency can be set.
 #define TRAIN1_MOTOR_ENA 9
 #define TRAIN1_MOTOR_IN1 8
 #define TRAIN1_MOTOR_IN2 7
@@ -35,6 +38,9 @@ const char END_OF_COMMAND_CHAR = '\n';
 char cmd[MAX_COMMAND_LENGTH];
 unsigned int cmdIndex;
 
+// I'm using the SoftwareSerial library here, to attach the Bluetooth module
+// to some other pins than RX and TX. So i don't have to remove it every time
+// i upload new program to my Arduino board.
 SoftwareSerial Bluetooth(11, 10); // RX, TX
 
 bool directionForwardTrain1 = true;
@@ -45,7 +51,7 @@ void setup() {
   Serial.println("INFO - setup - Starting up Präänikuküla Controls...");
 
   delay(500); // wait for bluetooth module to start
-  Bluetooth.begin(9600);
+  Bluetooth.begin(BLUETOOTH_MODULE_BAUD_RATE);
 
   cmdIndex = 0;
 
@@ -265,7 +271,7 @@ void turnTurnoutServo(const int servoControlPin, const int turnoutSwitchInputPin
   }
   turnoutSwitchState = digitalRead(turnoutSwitchInputPin);
   if (turnoutSwitchState != turnoutSwitchStateWhenDone) {
-    Serial.print("#### ERROR! #### - turnout switch is not in expected state after turn!");
+    Serial.print("#### ERROR! #### - turnout switch is not in expected state after turn!\n");
   }
 }
 
