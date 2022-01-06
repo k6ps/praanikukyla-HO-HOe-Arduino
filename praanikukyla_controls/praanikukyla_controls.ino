@@ -20,6 +20,7 @@
 #define BLOCK5_ENA 24
 
 // Pins for controlling turnouts
+#define TURNOUT_1_ENA 28
 #define TURNOUT_1_SERVO 30
 #define TURNOUT_1_SWITCH 31
 
@@ -70,8 +71,12 @@ void setup() {
   pinMode(BLOCK4_ENA, OUTPUT);
   pinMode(BLOCK5_ENA, OUTPUT);
 
-  // Initializing turnout switches
+  // Initializing turnout switches and enable/disable pins
+  pinMode(TURNOUT_1_ENA, OUTPUT);
   pinMode(TURNOUT_1_SWITCH, INPUT);
+
+  // Disble all turnouts. Turnouts will be enabled only for the time they are turned.
+  digitalWrite(TURNOUT_1_ENA, LOW);
 
   // Set default direction of train 1 to FORWARD
   setDirectionTrain1(true);
@@ -167,20 +172,26 @@ void executeCommand() {
 
   if( cmdStartsWith("turnout_1_calibrate") ) {
     Serial.println("DEBUG - executeCommand - calibrating turnout 1");
+    digitalWrite(TURNOUT_1_ENA, HIGH);
     calibrateTurnoutServo(TURNOUT_1_SERVO, TURNOUT_1_SWITCH, SERVO_SPEED_RIGHT, SERVO_SPEED_LEFT, SERVO_SPEED_STOP);
+    digitalWrite(TURNOUT_1_ENA, LOW);
   }
  
   if( cmdStartsWith("turnout_1_straight") ) {
     Serial.println("DEBUG - executeCommand - turning turnout 1 straight");
     // Turnout 1 is a left turnout. So when the turnout mechanism has moved to left, train goes straight. 
     // when turnout mechanism has moved to right, train turns left.
+    digitalWrite(TURNOUT_1_ENA, HIGH);
     turnTurnoutServo(TURNOUT_1_SERVO, TURNOUT_1_SWITCH, HIGH, SERVO_SPEED_LEFT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
+    digitalWrite(TURNOUT_1_ENA, LOW);
   }
  
   if( cmdStartsWith("turnout_1_turn") ) {
     Serial.println("DEBUG - executeCommand - turning turnout 1 turn");
     // Turnout 1 is a left turnout. So when the turnout mechanism has moved to right, train turns left.
+    digitalWrite(TURNOUT_1_ENA, HIGH);
     turnTurnoutServo(TURNOUT_1_SERVO, TURNOUT_1_SWITCH, LOW, SERVO_SPEED_RIGHT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
+    digitalWrite(TURNOUT_1_ENA, LOW);
   }
  
   if( cmdStartsWith("direction_train1") ) {
