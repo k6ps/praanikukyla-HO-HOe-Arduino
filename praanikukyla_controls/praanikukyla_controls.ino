@@ -1,7 +1,7 @@
 #include <SoftwareSerial.h>
 #include <Servo.h>
 
-# Bluetooth module baud rate. My module is BC-06, and it uses 9600.
+// Bluetooth module baud rate. My module is BC-06, and it uses 9600.
 #define BLUETOOTH_MODULE_BAUD_RATE 9600
 
 // Pins for controlling two trains (actually just sets of blocks of railroad)
