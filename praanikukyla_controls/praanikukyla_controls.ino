@@ -25,7 +25,7 @@
 #define TURNOUT_1_SWITCH 31
 
 // Turnout servo on times
-#define MOVEMENT_TIME_FOR_TURNOUT_CHANGE 600
+#define MOVEMENT_TIME_FOR_TURNOUT_CHANGE 950
 
 // Speeds of the turnout (continuous rotation) servos.
 #define SERVO_SPEED_STOP 90
@@ -49,6 +49,7 @@ unsigned int trainSpeed_1 = 0;
 
 void setup() {
   Serial.begin(9600);
+  Serial.println("====================================================");
   Serial.println("INFO - setup - Starting up Präänikuküla Controls...");
 
   delay(500); // wait for bluetooth module to start
