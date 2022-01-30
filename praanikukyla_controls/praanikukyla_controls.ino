@@ -196,7 +196,7 @@ void executeCommand() {
     // Turnout 1 is a left turnout. So when the turnout mechanism has moved to left, train goes straight. 
     // when turnout mechanism has moved to right, train turns left.
     digitalWrite(TURNOUT_1_ENA, HIGH);
-    turnTurnoutServo(TURNOUT_1_SERVO, TURNOUT_1_SWITCH, HIGH, SERVO_SPEED_LEFT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
+    turnTurnoutServo(TURNOUT_1_SERVO, TURNOUT_1_SWITCH, TURNOUT_1_SWITCH_STATE_AT_LEFT, SERVO_SPEED_LEFT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
     digitalWrite(TURNOUT_1_ENA, LOW);
   }
  
@@ -204,8 +204,33 @@ void executeCommand() {
     Serial.println("DEBUG - executeCommand - turning turnout 1 turn");
     // Turnout 1 is a left turnout. So when the turnout mechanism has moved to right, train turns left.
     digitalWrite(TURNOUT_1_ENA, HIGH);
-    turnTurnoutServo(TURNOUT_1_SERVO, TURNOUT_1_SWITCH, LOW, SERVO_SPEED_RIGHT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
+    turnTurnoutServo(TURNOUT_1_SERVO, TURNOUT_1_SWITCH, TURNOUT_1_SWITCH_STATE_AT_RIGHT, SERVO_SPEED_RIGHT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
     digitalWrite(TURNOUT_1_ENA, LOW);
+  }
+ 
+  if( cmdStartsWith("turnout_5_calibrate") ) {
+    Serial.println("DEBUG - executeCommand - calibrating turnout 5");
+    digitalWrite(TURNOUT_5_ENA, HIGH);
+    calibrateTurnoutServo(TURNOUT_5_SERVO, TURNOUT_5_SWITCH, SERVO_SPEED_RIGHT, SERVO_SPEED_LEFT, SERVO_SPEED_STOP, TURNOUT_5_SWITCH_STATE_AT_LEFT, TURNOUT_5_SWITCH_STATE_AT_RIGHT);
+    digitalWrite(TURNOUT_5_ENA, LOW);
+  }
+ 
+  if( cmdStartsWith("turnout_5_straight") ) {
+    Serial.println("DEBUG - executeCommand - turning turnout 5 straight");
+    // Turnout 5 is a rigth turnout. So when the turnout mechanism has moved to right, train goes straight. 
+    // when turnout mechanism has moved to left, train turns right.
+    digitalWrite(TURNOUT_5_ENA, HIGH);
+    turnTurnoutServo(TURNOUT_5_SERVO, TURNOUT_5_SWITCH, TURNOUT_5_SWITCH_STATE_AT_RIGHT, SERVO_SPEED_RIGHT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
+    digitalWrite(TURNOUT_5_ENA, LOW);
+  }
+ 
+  if( cmdStartsWith("turnout_5_turn") ) {
+    Serial.println("DEBUG - executeCommand - turning turnout 5 turn");
+    // Turnout 5 is a rigth turnout. So when the turnout mechanism has moved to right, train goes straight. 
+    // when turnout mechanism has moved to left, train turns right.
+    digitalWrite(TURNOUT_5_ENA, HIGH);
+    turnTurnoutServo(TURNOUT_5_SERVO, TURNOUT_5_SWITCH, TURNOUT_5_SWITCH_STATE_AT_LEFT, SERVO_SPEED_LEFT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
+    digitalWrite(TURNOUT_5_ENA, LOW);
   }
  
   if( cmdStartsWith("direction_train1") ) {
