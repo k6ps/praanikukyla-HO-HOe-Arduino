@@ -23,6 +23,17 @@
 #define TURNOUT_1_ENA 28
 #define TURNOUT_1_SERVO 30
 #define TURNOUT_1_SWITCH 31
+#define TURNOUT_5_ENA 32
+#define TURNOUT_5_SERVO 33
+#define TURNOUT_5_SWITCH 34
+
+// Turnout switch enc states. For the Weinert 74310 switch mechanisms, they are different wether the
+// turnout is left or right. Here "LEFT" means the mechanism has moved to left if you look the mechanism
+// from the switch side to the servo side, not that this is a left turnout.
+#define TURNOUT_1_SWITCH_STATE_AT_LEFT HIGH
+#define TURNOUT_1_SWITCH_STATE_AT_RIGHT LOW
+#define TURNOUT_5_SWITCH_STATE_AT_LEFT LOW
+#define TURNOUT_5_SWITCH_STATE_AT_RIGHT HIGH
 
 // Turnout servo on times
 #define MOVEMENT_TIME_FOR_TURNOUT_CHANGE 950
@@ -75,6 +86,8 @@ void setup() {
   // Initializing turnout switches and enable/disable pins
   pinMode(TURNOUT_1_ENA, OUTPUT);
   pinMode(TURNOUT_1_SWITCH, INPUT);
+  pinMode(TURNOUT_5_ENA, OUTPUT);
+  pinMode(TURNOUT_5_SWITCH, INPUT);
 
   // Disble all turnouts. Turnouts will be enabled only for the time they are turned.
   digitalWrite(TURNOUT_1_ENA, LOW);
@@ -174,7 +187,7 @@ void executeCommand() {
   if( cmdStartsWith("turnout_1_calibrate") ) {
     Serial.println("DEBUG - executeCommand - calibrating turnout 1");
     digitalWrite(TURNOUT_1_ENA, HIGH);
-    calibrateTurnoutServo(TURNOUT_1_SERVO, TURNOUT_1_SWITCH, SERVO_SPEED_RIGHT, SERVO_SPEED_LEFT, SERVO_SPEED_STOP);
+    calibrateTurnoutServo(TURNOUT_1_SERVO, TURNOUT_1_SWITCH, SERVO_SPEED_RIGHT, SERVO_SPEED_LEFT, SERVO_SPEED_STOP, TURNOUT_1_SWITCH_STATE_AT_LEFT, TURNOUT_1_SWITCH_STATE_AT_RIGHT);
     digitalWrite(TURNOUT_1_ENA, LOW);
   }
  
@@ -229,7 +242,15 @@ void setDirectionTrain1(const bool directionForward) {
  * turnout mechanims and servo, to make sure the turnout movement happens around the center of the possible movement range of the turnout mechanism, and the switching 
  * happens somewhere in the middle of this movement. 
  */
-void calibrateTurnoutServo(const int servoControlPin, const int turnoutSwitchInputPin, const int servoSpeedRight, const int servoSpeedLeft, const int servoSpeedStop) {
+void calibrateTurnoutServo(
+  const int servoControlPin, 
+  const int turnoutSwitchInputPin, 
+  const int servoSpeedRight, 
+  const int servoSpeedLeft, 
+  const int servoSpeedStop,
+  const int switchStateAtLeft,
+  const int switchStateAtRight
+) {
   const unsigned int MOVEMENT_COUNT_FOR_CALIBRATION_LIMIT = 100;
   const unsigned int MOVEMENT_TIME_FROM_SWITCH_POSITION_TO_LEFT_END = 30;
   int turnoutSwitchState = digitalRead(turnoutSwitchInputPin);
@@ -239,18 +260,17 @@ void calibrateTurnoutServo(const int servoControlPin, const int turnoutSwitchInp
   myservo.write(servoSpeedStop);
   delay(100);
   unsigned int countForSafety = 0;
-  // If the switch is on (we are somewhere in the left side), then first move to right until
-  // the switch switches off.
+  // If the switch is in "left" side, then first move to right until the switch switches to "right" state.
   turnoutSwitchState = digitalRead(turnoutSwitchInputPin);
-  while (turnoutSwitchState == HIGH && countForSafety <= MOVEMENT_COUNT_FOR_CALIBRATION_LIMIT) {
+  while (turnoutSwitchState == switchStateAtLeft && countForSafety <= MOVEMENT_COUNT_FOR_CALIBRATION_LIMIT) {
     myservo.write(servoSpeedRight);
     delay(10);
     turnoutSwitchState = digitalRead(turnoutSwitchInputPin);
     countForSafety++;
   }
-  // Move left in small steps until the switch goes on.
+  // Move back left in small steps until the switch goes again to "left" state.
   countForSafety = 0;
-  while (turnoutSwitchState == LOW && countForSafety <= MOVEMENT_COUNT_FOR_CALIBRATION_LIMIT) {
+  while (turnoutSwitchState == switchStateAtRight && countForSafety <= MOVEMENT_COUNT_FOR_CALIBRATION_LIMIT) {
     myservo.write(servoSpeedLeft);
     delay(10);
     turnoutSwitchState = digitalRead(turnoutSwitchInputPin);
@@ -268,7 +288,14 @@ void calibrateTurnoutServo(const int servoControlPin, const int turnoutSwitchInp
   myservo.detach();
 }
 
-void turnTurnoutServo(const int servoControlPin, const int turnoutSwitchInputPin, const int turnoutSwitchStateWhenDone, const int servoSpeed, const int turnoutMovementTimeMillis, const int servoSpeedStop) {
+void turnTurnoutServo(
+  const int servoControlPin, 
+  const int turnoutSwitchInputPin, 
+  const int turnoutSwitchStateWhenDone, 
+  const int servoSpeed, 
+  const int turnoutMovementTimeMillis, 
+  const int servoSpeedStop
+) {
   int turnoutSwitchState = digitalRead(turnoutSwitchInputPin);
   if (turnoutSwitchState != turnoutSwitchStateWhenDone) {
     Servo myservo;
