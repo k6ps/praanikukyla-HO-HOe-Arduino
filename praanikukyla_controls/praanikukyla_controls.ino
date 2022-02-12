@@ -53,7 +53,7 @@ unsigned int cmdIndex;
 // I'm using the SoftwareSerial library here, to attach the Bluetooth module
 // to some other pins than RX and TX. So i don't have to remove it every time
 // i upload new program to my Arduino board.
-SoftwareSerial Bluetooth(11, 10); // RX, TX
+SoftwareSerial Bluetooth(11, 13); // RX, TX
 
 bool directionForwardTrain1 = true;
 unsigned int trainSpeed_1 = 0;
