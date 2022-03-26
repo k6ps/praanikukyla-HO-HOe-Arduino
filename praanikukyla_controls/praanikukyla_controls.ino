@@ -254,6 +254,8 @@ void executeCommand() {
     // Turnout 4 is a rigth turnout. So when the turnout mechanism has moved to right, train goes straight. 
     // when turnout mechanism has moved to left, train turns right.
     turnTurnoutServo(TURNOUT_4_ENA, TURNOUT_4_SERVO, TURNOUT_4_SWITCH, TURNOUT_4_SWITCH_STATE_AT_RIGHT, TURNOUT_4_SERVO_SPEED_RIGHT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
+    // As turnouts 4 and 5 are connected in a reverse N shaped set, it does not make sense to have one of them straight and the other turned. So, set also the other one to the same state:
+    turnTurnoutServo(TURNOUT_5_ENA, TURNOUT_5_SERVO, TURNOUT_5_SWITCH, TURNOUT_5_SWITCH_STATE_AT_RIGHT, TURNOUT_5_SERVO_SPEED_RIGHT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
   }
  
   if( cmdStartsWith("turnout_4_turn") ) {
@@ -261,6 +263,8 @@ void executeCommand() {
     // Turnout 4 is a rigth turnout. So when the turnout mechanism has moved to right, train goes straight. 
     // when turnout mechanism has moved to left, train turns right.
     turnTurnoutServo(TURNOUT_4_ENA, TURNOUT_4_SERVO, TURNOUT_4_SWITCH, TURNOUT_4_SWITCH_STATE_AT_LEFT, TURNOUT_4_SERVO_SPEED_LEFT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
+    // As turnouts 4 and 5 are connected in a reverse N shaped set, it does not make sense to have one of them straight and the other turned. So, set also the other one to the same state:
+    turnTurnoutServo(TURNOUT_5_ENA, TURNOUT_5_SERVO, TURNOUT_5_SWITCH, TURNOUT_5_SWITCH_STATE_AT_LEFT, TURNOUT_5_SERVO_SPEED_LEFT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
   }
  
   if( cmdStartsWith("turnout_5_calibrate") ) {
@@ -273,6 +277,8 @@ void executeCommand() {
     // Turnout 5 is a rigth turnout. So when the turnout mechanism has moved to right, train goes straight. 
     // when turnout mechanism has moved to left, train turns right.
     turnTurnoutServo(TURNOUT_5_ENA, TURNOUT_5_SERVO, TURNOUT_5_SWITCH, TURNOUT_5_SWITCH_STATE_AT_RIGHT, TURNOUT_5_SERVO_SPEED_RIGHT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
+    // As turnouts 4 and 5 are connected in a reverse N shaped set, it does not make sense to have one of them straight and the other turned. So, set also the other one to the same state:
+    turnTurnoutServo(TURNOUT_4_ENA, TURNOUT_4_SERVO, TURNOUT_4_SWITCH, TURNOUT_4_SWITCH_STATE_AT_RIGHT, TURNOUT_4_SERVO_SPEED_RIGHT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
   }
  
   if( cmdStartsWith("turnout_5_turn") ) {
@@ -280,6 +286,8 @@ void executeCommand() {
     // Turnout 5 is a rigth turnout. So when the turnout mechanism has moved to right, train goes straight. 
     // when turnout mechanism has moved to left, train turns right.
     turnTurnoutServo(TURNOUT_5_ENA, TURNOUT_5_SERVO, TURNOUT_5_SWITCH, TURNOUT_5_SWITCH_STATE_AT_LEFT, TURNOUT_5_SERVO_SPEED_LEFT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
+    // As turnouts 4 and 5 are connected in a reverse N shaped set, it does not make sense to have one of them straight and the other turned. So, set also the other one to the same state:
+    turnTurnoutServo(TURNOUT_4_ENA, TURNOUT_4_SERVO, TURNOUT_4_SWITCH, TURNOUT_4_SWITCH_STATE_AT_LEFT, TURNOUT_4_SERVO_SPEED_LEFT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
   }
  
   if( cmdStartsWith("direction_train1") ) {
