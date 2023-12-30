@@ -1,8 +1,14 @@
 #include <SoftwareSerial.h>
-#include <Servo.h>
+#include <Wire.h>
+#include <Adafruit_PWMServoDriver.h>
 
 // Bluetooth module baud rate. My module is BC-06, and it uses 9600.
 #define BLUETOOTH_MODULE_BAUD_RATE 9600
+
+// Constants related to the PCA9685 PWM board
+#define MIN_PULSE_WIDTH 650
+#define MAX_PULSE_WIDTH 2350
+#define FREQUENCY 50
 
 // Pins for controlling two trains (actually just sets of blocks of railroad)
 // independently of each other using a L298 DC motor controller.
@@ -19,18 +25,14 @@
 #define BLOCK4_ENA 22
 #define BLOCK5_ENA 24
 
-// Pins for controlling turnouts
-#define TURNOUT_1_ENA 28
-#define TURNOUT_1_SERVO 30
+// Pins and other addresses for controlling turnouts
+#define TURNOUT_1_PWM_ADDRESS 0
 #define TURNOUT_1_SWITCH 31
-#define TURNOUT_2_ENA 37
-#define TURNOUT_2_SERVO 35
+#define TURNOUT_2_PWM_ADDRESS 1
 #define TURNOUT_2_SWITCH 36
-#define TURNOUT_4_ENA 26
-#define TURNOUT_4_SERVO 38
+#define TURNOUT_4_PWM_ADDRESS 3
 #define TURNOUT_4_SWITCH 39
-#define TURNOUT_5_ENA 32
-#define TURNOUT_5_SERVO 33
+#define TURNOUT_5_PWM_ADDRESS 4
 #define TURNOUT_5_SWITCH 34
 
 // Turnout switch enc states. For the Weinert 74310 switch mechanisms, they are different wether the
@@ -66,6 +68,9 @@ const char END_OF_COMMAND_CHAR = '\n';
 char cmd[MAX_COMMAND_LENGTH];
 unsigned int cmdIndex;
 
+// The PWM board
+Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
+
 // I'm using the SoftwareSerial library here, to attach the Bluetooth module
 // to some other pins than RX and TX. So i don't have to remove it every time
 // i upload new program to my Arduino board.
@@ -79,8 +84,13 @@ void setup() {
   Serial.println("====================================================");
   Serial.println("INFO - setup - Starting up Präänikuküla Controls...");
 
+  // Initialise the Bluetooth module
   delay(500); // wait for bluetooth module to start
   Bluetooth.begin(BLUETOOTH_MODULE_BAUD_RATE);
+
+  // Initialise the PWM board
+  pwm.begin();
+  pwm.setPWMFreq(FREQUENCY);
 
   cmdIndex = 0;
 
@@ -99,21 +109,11 @@ void setup() {
   pinMode(BLOCK4_ENA, OUTPUT);
   pinMode(BLOCK5_ENA, OUTPUT);
 
-  // Initializing turnout switches and enable/disable pins
-  pinMode(TURNOUT_1_ENA, OUTPUT);
+  // Initializing turnout state feedback switches
   pinMode(TURNOUT_1_SWITCH, INPUT);
-  pinMode(TURNOUT_2_ENA, OUTPUT);
   pinMode(TURNOUT_2_SWITCH, INPUT);
-  pinMode(TURNOUT_4_ENA, OUTPUT);
   pinMode(TURNOUT_4_SWITCH, INPUT);
-  pinMode(TURNOUT_5_ENA, OUTPUT);
   pinMode(TURNOUT_5_SWITCH, INPUT);
-
-  // Disble all turnouts. Turnouts will be enabled only for the time they are turned.
-  digitalWrite(TURNOUT_1_ENA, LOW);
-  digitalWrite(TURNOUT_2_ENA, LOW);
-  digitalWrite(TURNOUT_4_ENA, LOW);
-  digitalWrite(TURNOUT_5_ENA, LOW);
 
   // Set default direction of train 1 to FORWARD
   setDirectionTrain1(true);
@@ -158,7 +158,6 @@ boolean cmdStartsWith(const char *st) {
   }
   return false;
 }
-
 
 void executeCommand() {
   
@@ -209,85 +208,85 @@ void executeCommand() {
 
   if( cmdStartsWith("turnout_1_calibrate") ) {
     Serial.println("DEBUG - executeCommand - calibrating turnout 1");
-    calibrateTurnoutServo(TURNOUT_1_ENA, TURNOUT_1_SERVO, TURNOUT_1_SWITCH, TURNOUT_1_SERVO_SPEED_RIGHT, TURNOUT_1_SERVO_SPEED_LEFT, SERVO_SPEED_STOP, TURNOUT_1_SWITCH_STATE_AT_LEFT, TURNOUT_1_SWITCH_STATE_AT_RIGHT);
+    calibrateTurnoutServo(TURNOUT_1_PWM_ADDRESS, TURNOUT_1_SWITCH, TURNOUT_1_SERVO_SPEED_RIGHT, TURNOUT_1_SERVO_SPEED_LEFT, SERVO_SPEED_STOP, TURNOUT_1_SWITCH_STATE_AT_LEFT, TURNOUT_1_SWITCH_STATE_AT_RIGHT);
   }
  
   if( cmdStartsWith("turnout_1_straight") ) {
     Serial.println("DEBUG - executeCommand - turning turnout 1 straight");
     // Turnout 1 is a left turnout. So when the turnout mechanism has moved to left, train goes straight. 
     // when turnout mechanism has moved to right, train turns left.
-    turnTurnoutServo(TURNOUT_1_ENA, TURNOUT_1_SERVO, TURNOUT_1_SWITCH, TURNOUT_1_SWITCH_STATE_AT_LEFT, TURNOUT_1_SERVO_SPEED_LEFT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
+    turnTurnoutServo(TURNOUT_1_PWM_ADDRESS, TURNOUT_1_SWITCH, TURNOUT_1_SWITCH_STATE_AT_LEFT, TURNOUT_1_SERVO_SPEED_LEFT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
   }
  
   if( cmdStartsWith("turnout_1_turn") ) {
     Serial.println("DEBUG - executeCommand - turning turnout 1 turn");
     // Turnout 1 is a left turnout. So when the turnout mechanism has moved to right, train turns left.
-    turnTurnoutServo(TURNOUT_1_ENA, TURNOUT_1_SERVO, TURNOUT_1_SWITCH, TURNOUT_1_SWITCH_STATE_AT_RIGHT, TURNOUT_1_SERVO_SPEED_RIGHT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
+    turnTurnoutServo(TURNOUT_1_PWM_ADDRESS, TURNOUT_1_SWITCH, TURNOUT_1_SWITCH_STATE_AT_RIGHT, TURNOUT_1_SERVO_SPEED_RIGHT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
   }
  
   if( cmdStartsWith("turnout_2_calibrate") ) {
     Serial.println("DEBUG - executeCommand - calibrating turnout 2");
-    calibrateTurnoutServo(TURNOUT_2_ENA, TURNOUT_2_SERVO, TURNOUT_2_SWITCH, TURNOUT_2_SERVO_SPEED_RIGHT, TURNOUT_2_SERVO_SPEED_LEFT, SERVO_SPEED_STOP, TURNOUT_2_SWITCH_STATE_AT_LEFT, TURNOUT_2_SWITCH_STATE_AT_RIGHT);
+    calibrateTurnoutServo(TURNOUT_2_PWM_ADDRESS, TURNOUT_2_SWITCH, TURNOUT_2_SERVO_SPEED_RIGHT, TURNOUT_2_SERVO_SPEED_LEFT, SERVO_SPEED_STOP, TURNOUT_2_SWITCH_STATE_AT_LEFT, TURNOUT_2_SWITCH_STATE_AT_RIGHT);
   }
  
   if( cmdStartsWith("turnout_2_straight") ) {
     Serial.println("DEBUG - executeCommand - turning turnout 2 straight");
     // Turnout 2 is a rigth turnout. So when the turnout mechanism has moved to right, train goes straight. 
     // when turnout mechanism has moved to left, train turns right.
-    turnTurnoutServo(TURNOUT_2_ENA, TURNOUT_2_SERVO, TURNOUT_2_SWITCH, TURNOUT_2_SWITCH_STATE_AT_RIGHT, TURNOUT_2_SERVO_SPEED_RIGHT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
+    turnTurnoutServo(TURNOUT_2_PWM_ADDRESS, TURNOUT_2_SWITCH, TURNOUT_2_SWITCH_STATE_AT_RIGHT, TURNOUT_2_SERVO_SPEED_RIGHT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
   }
  
   if( cmdStartsWith("turnout_2_turn") ) {
     Serial.println("DEBUG - executeCommand - turning turnout 2 turn");
     // Turnout 2 is a rigth turnout. So when the turnout mechanism has moved to right, train goes straight. 
     // when turnout mechanism has moved to left, train turns right.
-    turnTurnoutServo(TURNOUT_2_ENA, TURNOUT_2_SERVO, TURNOUT_2_SWITCH, TURNOUT_2_SWITCH_STATE_AT_LEFT, TURNOUT_2_SERVO_SPEED_LEFT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
+    turnTurnoutServo(TURNOUT_2_PWM_ADDRESS, TURNOUT_2_SWITCH, TURNOUT_2_SWITCH_STATE_AT_LEFT, TURNOUT_2_SERVO_SPEED_LEFT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
   }
  
   if( cmdStartsWith("turnout_4_calibrate") ) {
     Serial.println("DEBUG - executeCommand - calibrating turnout 4");
-    calibrateTurnoutServo(TURNOUT_4_ENA, TURNOUT_4_SERVO, TURNOUT_4_SWITCH, TURNOUT_4_SERVO_SPEED_RIGHT, TURNOUT_4_SERVO_SPEED_LEFT, SERVO_SPEED_STOP, TURNOUT_4_SWITCH_STATE_AT_LEFT, TURNOUT_4_SWITCH_STATE_AT_RIGHT);
+    calibrateTurnoutServo(TURNOUT_4_PWM_ADDRESS, TURNOUT_4_SWITCH, TURNOUT_4_SERVO_SPEED_RIGHT, TURNOUT_4_SERVO_SPEED_LEFT, SERVO_SPEED_STOP, TURNOUT_4_SWITCH_STATE_AT_LEFT, TURNOUT_4_SWITCH_STATE_AT_RIGHT);
   }
  
   if( cmdStartsWith("turnout_4_straight") ) {
     Serial.println("DEBUG - executeCommand - turning turnout 4 straight");
     // Turnout 4 is a rigth turnout. So when the turnout mechanism has moved to right, train goes straight. 
     // when turnout mechanism has moved to left, train turns right.
-    turnTurnoutServo(TURNOUT_4_ENA, TURNOUT_4_SERVO, TURNOUT_4_SWITCH, TURNOUT_4_SWITCH_STATE_AT_RIGHT, TURNOUT_4_SERVO_SPEED_RIGHT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
+    turnTurnoutServo(TURNOUT_4_PWM_ADDRESS, TURNOUT_4_SWITCH, TURNOUT_4_SWITCH_STATE_AT_RIGHT, TURNOUT_4_SERVO_SPEED_RIGHT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
     // As turnouts 4 and 5 are connected in a reverse N shaped set, it does not make sense to have one of them straight and the other turned. So, set also the other one to the same state:
-    turnTurnoutServo(TURNOUT_5_ENA, TURNOUT_5_SERVO, TURNOUT_5_SWITCH, TURNOUT_5_SWITCH_STATE_AT_RIGHT, TURNOUT_5_SERVO_SPEED_RIGHT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
+    turnTurnoutServo(TURNOUT_5_PWM_ADDRESS, TURNOUT_5_SWITCH, TURNOUT_5_SWITCH_STATE_AT_RIGHT, TURNOUT_5_SERVO_SPEED_RIGHT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
   }
  
   if( cmdStartsWith("turnout_4_turn") ) {
     Serial.println("DEBUG - executeCommand - turning turnout 4 turn");
     // Turnout 4 is a rigth turnout. So when the turnout mechanism has moved to right, train goes straight. 
     // when turnout mechanism has moved to left, train turns right.
-    turnTurnoutServo(TURNOUT_4_ENA, TURNOUT_4_SERVO, TURNOUT_4_SWITCH, TURNOUT_4_SWITCH_STATE_AT_LEFT, TURNOUT_4_SERVO_SPEED_LEFT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
+    turnTurnoutServo(TURNOUT_4_PWM_ADDRESS, TURNOUT_4_SWITCH, TURNOUT_4_SWITCH_STATE_AT_LEFT, TURNOUT_4_SERVO_SPEED_LEFT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
     // As turnouts 4 and 5 are connected in a reverse N shaped set, it does not make sense to have one of them straight and the other turned. So, set also the other one to the same state:
-    turnTurnoutServo(TURNOUT_5_ENA, TURNOUT_5_SERVO, TURNOUT_5_SWITCH, TURNOUT_5_SWITCH_STATE_AT_LEFT, TURNOUT_5_SERVO_SPEED_LEFT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
+    turnTurnoutServo(TURNOUT_5_PWM_ADDRESS, TURNOUT_5_SWITCH, TURNOUT_5_SWITCH_STATE_AT_LEFT, TURNOUT_5_SERVO_SPEED_LEFT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
   }
  
   if( cmdStartsWith("turnout_5_calibrate") ) {
     Serial.println("DEBUG - executeCommand - calibrating turnout 5");
-    calibrateTurnoutServo(TURNOUT_5_ENA, TURNOUT_5_SERVO, TURNOUT_5_SWITCH, TURNOUT_5_SERVO_SPEED_RIGHT, TURNOUT_5_SERVO_SPEED_LEFT, SERVO_SPEED_STOP, TURNOUT_5_SWITCH_STATE_AT_LEFT, TURNOUT_5_SWITCH_STATE_AT_RIGHT);
+    calibrateTurnoutServo(TURNOUT_5_PWM_ADDRESS, TURNOUT_5_SWITCH, TURNOUT_5_SERVO_SPEED_RIGHT, TURNOUT_5_SERVO_SPEED_LEFT, SERVO_SPEED_STOP, TURNOUT_5_SWITCH_STATE_AT_LEFT, TURNOUT_5_SWITCH_STATE_AT_RIGHT);
   }
  
   if( cmdStartsWith("turnout_5_straight") ) {
     Serial.println("DEBUG - executeCommand - turning turnout 5 straight");
     // Turnout 5 is a rigth turnout. So when the turnout mechanism has moved to right, train goes straight. 
     // when turnout mechanism has moved to left, train turns right.
-    turnTurnoutServo(TURNOUT_5_ENA, TURNOUT_5_SERVO, TURNOUT_5_SWITCH, TURNOUT_5_SWITCH_STATE_AT_RIGHT, TURNOUT_5_SERVO_SPEED_RIGHT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
+    turnTurnoutServo(TURNOUT_5_PWM_ADDRESS, TURNOUT_5_SWITCH, TURNOUT_5_SWITCH_STATE_AT_RIGHT, TURNOUT_5_SERVO_SPEED_RIGHT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
     // As turnouts 4 and 5 are connected in a reverse N shaped set, it does not make sense to have one of them straight and the other turned. So, set also the other one to the same state:
-    turnTurnoutServo(TURNOUT_4_ENA, TURNOUT_4_SERVO, TURNOUT_4_SWITCH, TURNOUT_4_SWITCH_STATE_AT_RIGHT, TURNOUT_4_SERVO_SPEED_RIGHT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
+    turnTurnoutServo(TURNOUT_4_PWM_ADDRESS, TURNOUT_4_SWITCH, TURNOUT_4_SWITCH_STATE_AT_RIGHT, TURNOUT_4_SERVO_SPEED_RIGHT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
   }
  
   if( cmdStartsWith("turnout_5_turn") ) {
     Serial.println("DEBUG - executeCommand - turning turnout 5 turn");
     // Turnout 5 is a rigth turnout. So when the turnout mechanism has moved to right, train goes straight. 
     // when turnout mechanism has moved to left, train turns right.
-    turnTurnoutServo(TURNOUT_5_ENA, TURNOUT_5_SERVO, TURNOUT_5_SWITCH, TURNOUT_5_SWITCH_STATE_AT_LEFT, TURNOUT_5_SERVO_SPEED_LEFT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
+    turnTurnoutServo(TURNOUT_5_PWM_ADDRESS, TURNOUT_5_SWITCH, TURNOUT_5_SWITCH_STATE_AT_LEFT, TURNOUT_5_SERVO_SPEED_LEFT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
     // As turnouts 4 and 5 are connected in a reverse N shaped set, it does not make sense to have one of them straight and the other turned. So, set also the other one to the same state:
-    turnTurnoutServo(TURNOUT_4_ENA, TURNOUT_4_SERVO, TURNOUT_4_SWITCH, TURNOUT_4_SWITCH_STATE_AT_LEFT, TURNOUT_4_SERVO_SPEED_LEFT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
+    turnTurnoutServo(TURNOUT_4_PWM_ADDRESS, TURNOUT_4_SWITCH, TURNOUT_4_SWITCH_STATE_AT_LEFT, TURNOUT_4_SERVO_SPEED_LEFT, MOVEMENT_TIME_FOR_TURNOUT_CHANGE, SERVO_SPEED_STOP);
   }
  
   if( cmdStartsWith("direction_train1") ) {
@@ -318,6 +317,14 @@ void setDirectionTrain1(const bool directionForward) {
 }
 
 /* 
+ *  Calculate the PCA9685-specific pulse witdh for a given servo speed (if continuous rotation servo) or angle (0-180).
+ */
+unsigned int calculatePwmValueForServoSpeed(const unsigned int servoSpeed) {
+  const unsigned int pulseWidth = map(servoSpeed, 0, 180, MIN_PULSE_WIDTH, MAX_PULSE_WIDTH);
+  return int(float(pulseWidth) / 1000000 * FREQUENCY * 4096);
+}
+
+/* 
  * I have Weinert Modellbau 74310 turnout point mechanisms (because i wanted the rotating turnout lanterns - 72381 and the lke - in my layout), but some old SG90 continuous 
  * rotation microservos, which is probably not the best combination.  Standard servos would be better, i guess.  So i'm relying on precise millisecond timing to turn my 
  * turnouts with these servos. I'm using the "frog" polarity switch of the turnout mechanism to detect which state the turnout is in. Initially i need to calibrate the 
@@ -325,8 +332,7 @@ void setDirectionTrain1(const bool directionForward) {
  * happens somewhere in the middle of this movement. 
  */
 void calibrateTurnoutServo(
-  const int servoEnabledPin,
-  const int servoControlPin, 
+  const int servoAddress, 
   const int turnoutSwitchInputPin, 
   const int servoSpeedRight, 
   const int servoSpeedLeft, 
@@ -336,18 +342,15 @@ void calibrateTurnoutServo(
 ) {
   const unsigned int MOVEMENT_COUNT_FOR_CALIBRATION_LIMIT = 100;
   const unsigned int MOVEMENT_TIME_FROM_SWITCH_POSITION_TO_LEFT_END = 30;
-  digitalWrite(servoEnabledPin, HIGH);
   int turnoutSwitchState = digitalRead(turnoutSwitchInputPin);
   debugSwitchState(turnoutSwitchInputPin, String("beginning of calibration"));
-  Servo myservo;
-  myservo.attach(servoControlPin);  // attaches the servo on pin 9 to the servo object
-  myservo.write(servoSpeedStop);
+  pwm.setPWM(servoAddress, 0, calculatePwmValueForServoSpeed(servoSpeedStop));  
   delay(100);
   unsigned int countForSafety = 0;
   // If the switch is in "left" side, then first move to right until the switch switches to "right" state.
   turnoutSwitchState = digitalRead(turnoutSwitchInputPin);
   while (turnoutSwitchState == switchStateAtLeft && countForSafety <= MOVEMENT_COUNT_FOR_CALIBRATION_LIMIT) {
-    myservo.write(servoSpeedRight);
+    pwm.setPWM(servoAddress, 0, calculatePwmValueForServoSpeed(servoSpeedRight));  
     delay(10);
     turnoutSwitchState = digitalRead(turnoutSwitchInputPin);
     countForSafety++;
@@ -355,7 +358,7 @@ void calibrateTurnoutServo(
   // Move back left in small steps until the switch goes again to "left" state.
   countForSafety = 0;
   while (turnoutSwitchState == switchStateAtRight && countForSafety <= MOVEMENT_COUNT_FOR_CALIBRATION_LIMIT) {
-    myservo.write(servoSpeedLeft);
+    pwm.setPWM(servoAddress, 0, calculatePwmValueForServoSpeed(servoSpeedLeft));  
     delay(10);
     turnoutSwitchState = digitalRead(turnoutSwitchInputPin);
     countForSafety++;
@@ -363,45 +366,36 @@ void calibrateTurnoutServo(
   // Now we have found the point where the switch happens, so we know where we are.  
   // Moving left for the experimentally found anmount of time (depends on the screw position of the switch), 
   // to reach the left end of the switchable area:
-  myservo.write(servoSpeedLeft);
+  pwm.setPWM(servoAddress, 0, calculatePwmValueForServoSpeed(servoSpeedLeft));  
   delay(MOVEMENT_TIME_FROM_SWITCH_POSITION_TO_LEFT_END);
-  myservo.write(servoSpeedStop);
+  pwm.setPWM(servoAddress, 0, calculatePwmValueForServoSpeed(servoSpeedStop));  
   // wait a bit:
   delay(100);
   debugSwitchState(turnoutSwitchInputPin, String("end of calibration"));
-  myservo.detach();
-  digitalWrite(servoEnabledPin, LOW);
 }
 
 void turnTurnoutServo(
-  const int servoEnabledPin,
-  const int servoControlPin, 
+  const int servoAddress, 
   const int turnoutSwitchInputPin, 
   const int turnoutSwitchStateWhenDone, 
   const int servoSpeed, 
   const int turnoutMovementTimeMillis, 
   const int servoSpeedStop
 ) {
-  digitalWrite(servoEnabledPin, HIGH);
   int turnoutSwitchState = digitalRead(turnoutSwitchInputPin);
   if (turnoutSwitchState != turnoutSwitchStateWhenDone) {
-    Servo myservo;
-    myservo.attach(servoControlPin);
     debugSwitchState(turnoutSwitchInputPin, String("beginning of turn"));
-    myservo.write(servoSpeed);
+    pwm.setPWM(servoAddress, 0, calculatePwmValueForServoSpeed(servoSpeed));  
     delay(turnoutMovementTimeMillis);
-    myservo.write(servoSpeedStop);
+    pwm.setPWM(servoAddress, 0, calculatePwmValueForServoSpeed(servoSpeedStop));  
     delay(100);
     debugSwitchState(turnoutSwitchInputPin, String("end of turn"));
-    myservo.detach();
   }
   turnoutSwitchState = digitalRead(turnoutSwitchInputPin);
   if (turnoutSwitchState != turnoutSwitchStateWhenDone) {
     Serial.print("#### ERROR! #### - turnout switch is not in expected state after turn!\n");
   }
-  digitalWrite(servoEnabledPin, LOW);
 }
-
 
 void debugSwitchState(const int turnoutSwitchInputPin, String switchStateMoment) {
   int turnoutSwitchState = digitalRead(turnoutSwitchInputPin);
