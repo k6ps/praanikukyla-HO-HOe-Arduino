@@ -55,8 +55,8 @@
 // There is some inprecision of these servos: the left and right correct speeds are not at symmetric distances from the stop speed.
 #define TURNOUT_1_SERVO_SPEED_LEFT 80
 #define TURNOUT_1_SERVO_SPEED_RIGHT 102
-#define TURNOUT_2_SERVO_SPEED_LEFT 80
-#define TURNOUT_2_SERVO_SPEED_RIGHT 102
+#define TURNOUT_2_SERVO_SPEED_LEFT 82
+#define TURNOUT_2_SERVO_SPEED_RIGHT 104
 #define TURNOUT_4_SERVO_SPEED_LEFT 78
 #define TURNOUT_4_SERVO_SPEED_RIGHT 102
 #define TURNOUT_5_SERVO_SPEED_LEFT 78
@@ -137,6 +137,21 @@ void setup() {
 }
 
 void loop() {
+
+//    int switch1InputState = digitalRead(TURNOUT_1_SWITCH);
+//    if (HIGH == switch1InputState) {
+//      Serial.print("TURNOUT_1_SWITCH is HIGH.\n");
+//    } else {
+//      Serial.print("TURNOUT_1_SWITCH is LOW.\n");
+//    }
+//    int switch2InputState = digitalRead(TURNOUT_2_SWITCH);
+//    if (HIGH == switch2InputState) {
+//      Serial.print("TURNOUT_2_SWITCH is HIGH.\n");
+//    } else {
+//      Serial.print("TURNOUT_2_SWITCH is LOW.\n");
+//    }
+//    delay(5000);
+  
   if (Bluetooth.available()) {
     char inChar = (char) Bluetooth.read();
     if(inChar == END_OF_COMMAND_CHAR) {
