@@ -137,21 +137,6 @@ void setup() {
 }
 
 void loop() {
-
-//    int switch1InputState = digitalRead(TURNOUT_1_SWITCH);
-//    if (HIGH == switch1InputState) {
-//      Serial.print("TURNOUT_1_SWITCH is HIGH.\n");
-//    } else {
-//      Serial.print("TURNOUT_1_SWITCH is LOW.\n");
-//    }
-//    int switch2InputState = digitalRead(TURNOUT_2_SWITCH);
-//    if (HIGH == switch2InputState) {
-//      Serial.print("TURNOUT_2_SWITCH is HIGH.\n");
-//    } else {
-//      Serial.print("TURNOUT_2_SWITCH is LOW.\n");
-//    }
-//    delay(5000);
-  
   if (Bluetooth.available()) {
     char inChar = (char) Bluetooth.read();
     if(inChar == END_OF_COMMAND_CHAR) {
